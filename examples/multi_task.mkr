@@ -1,0 +1,72 @@
+-- multi_task.mkr — multiple concurrent tasks, one rejected
+-- Run: minikran ledger examples/multi_task.mkr
+
+workroom "batch-wr" {
+    license  "lic-batch-99"
+    scope    "batch"
+    node     "node-1"
+    expires  99999
+    key      0xffffffffffffffff
+    sig      0xeeeeeeeeeeeeeeee
+}
+
+ceiling { cpu: 32, mem: 64, store: 200, power: 100 }
+
+task preprocess {
+    id       10
+    priority 5
+    budget   { cpu: 2, mem: 4, store: 10, power: 2 }
+    deadline 90000
+    input    #sha256:aaa
+    code     #sha256:bbb
+    verify   proof
+    recover  restore
+}
+
+task transform {
+    id       11
+    priority 4
+    budget   { cpu: 4, mem: 8, store: 20, power: 4 }
+    deadline 90000
+    input    #sha256:ccc
+    code     #sha256:ddd
+    verify   proof
+    recover  restore
+    parent   10
+}
+
+task export {
+    id       12
+    priority 3
+    budget   { cpu: 1, mem: 2, store: 50, power: 1 }
+    deadline 90000
+    input    #sha256:eee
+    code     #sha256:fff
+    verify   proof
+    recover  restore
+    parent   11
+}
+
+-- preprocess: happy path
+spawn    preprocess at 1
+schedule preprocess -> node:1
+dispatch preprocess @ node:1
+checkpoint preprocess epoch:1 -> cp:10
+verify   preprocess ok
+commit   preprocess
+
+-- transform: rejected (bad output hash)
+spawn    transform at 2
+schedule transform -> node:1
+dispatch transform @ node:1
+checkpoint transform epoch:1 -> cp:11
+verify   transform reject
+abort    transform
+
+-- export: clean run
+spawn    export at 3
+schedule export -> node:1
+dispatch export @ node:1
+checkpoint export epoch:1 -> cp:12
+verify   export ok
+commit   export

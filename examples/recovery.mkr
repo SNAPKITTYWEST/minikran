@@ -1,0 +1,48 @@
+-- recovery.mkr — fault and checkpoint recovery path
+-- Run: minikran ledger examples/recovery.mkr
+--
+-- Shows: spawn → dispatch → checkpoint → fault → recover → restore → retry → dispatch again
+
+workroom "research-wr" {
+    license  "lic-research-01"
+    scope    "analysis"
+    node     "node-3"
+    expires  5000
+    key      0x0102030405060708
+    sig      0x0a0b0c0d0e0f1011
+}
+
+ceiling { cpu: 8, mem: 16, store: 50, power: 20 }
+
+task matrix-invert {
+    id       42
+    priority 3
+    budget   { cpu: 4, mem: 8, store: 5, power: 4 }
+    deadline 4900
+    input    #sha256:deadbeef
+    code     #sha256:feedface
+    verify   proof
+    recover  restore
+}
+
+-- Normal start
+spawn    matrix-invert at 100
+schedule matrix-invert -> node:3
+dispatch matrix-invert @ node:3
+
+-- Checkpoint saved at epoch 1
+checkpoint matrix-invert epoch:1 -> cp:200
+
+-- Fault occurs mid-run
+fault    matrix-invert epoch:1
+
+-- Recovery sequence
+recover  matrix-invert
+restore  matrix-invert <- cp:200
+retry    matrix-invert -> node:3
+
+-- Re-dispatched at epoch 2
+dispatch matrix-invert @ node:3
+checkpoint matrix-invert epoch:2 -> cp:201
+verify   matrix-invert ok
+commit   matrix-invert

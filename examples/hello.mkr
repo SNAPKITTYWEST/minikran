@@ -1,0 +1,39 @@
+-- hello.mkr — canonical MINIKRAN program
+-- Run: minikran ledger examples/hello.mkr
+--
+-- Shows the happy path: spawn → schedule → dispatch →
+-- checkpoint → verify ok → commit
+
+-- Declare the workroom (authorization context)
+workroom "production-wr" {
+    license  "lic-abc123"
+    scope    "compute"
+    node     "node-7"
+    expires  9999
+    key      0xdeadbeef
+    sig      0xcafebabe
+}
+
+-- Resource ceiling for this kernel instance
+ceiling { cpu: 16, mem: 32, store: 100, power: 50 }
+
+-- Declare a task
+task compute-sum {
+    id       1
+    priority 2
+    budget   { cpu: 4, mem: 8, store: 10, power: 5 }
+    deadline 8000
+    input    #sha256:aabbccdd
+    code     #sha256:11223344
+    verify   proof
+    recover  restore
+    parent   none
+}
+
+-- Lifecycle
+spawn    compute-sum at 10
+schedule compute-sum -> node:7
+dispatch compute-sum @ node:7
+checkpoint compute-sum epoch:1 -> cp:100
+verify   compute-sum ok
+commit   compute-sum
