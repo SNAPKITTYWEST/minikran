@@ -1,0 +1,9 @@
+[package]
+name = "minikran"
+version = "0.1.0"
+edition = "2024"
+description = "Fail-closed orbital task orchestration kernel"
+publish = false
+license-file = "LICENSE.md"
+
+[dependencies]
